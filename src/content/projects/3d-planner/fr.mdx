@@ -1,0 +1,50 @@
+---
+title: Un planificateur de chemin 3D pour un drone autonome
+summary: Mon propre planificateur 3D, qui fait voler un drone PX4 simulé entre des obstacles de différentes hauteurs à partir d’une OctoMap construite par sa caméra de profondeur. Projet en cours, avec son journal d’avancement.
+status: in-progress
+date: 2026-10-05
+thumbnail: ./images/planner-sketch.svg
+thumbnailAlt: Croquis isométrique d’un drone à un point de départ bas et d’une cible placée en hauteur, avec un chemin rouge qui monte par-dessus et autour d’obstacles en forme de boîtes.
+role: Seul développeur
+stack: [C++, ROS 2, PX4 SITL, OctoMap, Gazebo Harmonic]
+links: []
+---
+
+import sketch from './images/planner-sketch.svg';
+
+## Pourquoi ce projet
+
+La plupart des outils de navigation open source pour ROS 2 sont conçus pour des robots terrestres. Nav2 planifie sur une carte de coûts 2D : un drone qui l’utilise doit voler à altitude fixe, comme un robot terrestre qui se trouverait dans les airs. C’est cette limite qui a arrêté mon [projet de VI-SLAM](/fr/projects/vi-slam/) à la cartographie : l’étape suivante, faire voler des trajectoires planifiées dans la carte, demandait un planificateur 3D.
+
+Ce projet est cette étape manquante. PX4 gère le contrôle de vol et OctoMap la cartographie. Le planificateur entre les deux, qui transforme un objectif 3D et une carte de voxels en chemin sans collision, est la partie que j’écris moi-même.
+
+<Figure
+  src={sketch}
+  alt="Croquis isométrique : un drone juste au-dessus du sol à gauche, des obstacles en forme de boîtes de hauteurs différentes, et un chemin rouge qui monte par-dessus un muret et passe devant deux piliers jusqu’à un objectif en hauteur à droite."
+  caption="Ce que le planificateur doit faire : atteindre un objectif en 3D en montant par-dessus et en contournant des obstacles de hauteurs différentes."
+/>
+
+## Critère de fin
+
+Le projet est terminé quand ce scénario fonctionne de bout en bout, enregistré dans une vidéo de 60 secondes :
+
+1. Dans un monde Gazebo avec des obstacles à plusieurs hauteurs, le drone décolle.
+2. Il reçoit un objectif 3D.
+3. Il planifie un chemin avec mon planificateur, sur une OctoMap construite par sa propre caméra de profondeur.
+4. Il s’y rend sans collision et atterrit.
+
+Le code sera public sur GitHub, avec un README qui explique comment le lancer.
+
+## La pile logicielle
+
+| Couche | Outil | Développé par moi ? |
+| --- | --- | --- |
+| Simulation | Gazebo Harmonic | Non |
+| Contrôle de vol et estimation d’état | PX4 SITL (EKF2) | Non |
+| Cartographie 3D | OctoMap à partir de la caméra de profondeur simulée | Non |
+| Planification de chemin 3D | Planificateur sur l’OctoMap | **Oui** |
+| Intégration | Nœuds ROS 2 entre PX4, la carte et le planificateur | Oui |
+
+## Journal d’avancement
+
+- **Octobre 2026 :** périmètre et critère de fin définis. Choix de Gazebo Harmonic plutôt qu’Isaac Sim, parce que PX4 le supporte officiellement et qu’il tourne sur mon matériel.

@@ -1,0 +1,181 @@
+---
+import { render } from 'astro:content';
+import { localePath, ui, type Locale } from '../i18n';
+import type { Project } from '../projects';
+import Figure from './Figure.astro';
+import Video from './Video.astro';
+
+interface Props {
+  locale: Locale;
+  project: Project;
+}
+
+const { locale, project } = Astro.props;
+const { entry, isFallback } = project;
+const { data } = entry;
+const t = ui[locale];
+const { Content } = await render(entry);
+---
+
+<article lang={isFallback ? 'en' : undefined}>
+  <p class="back"><a href={`${localePath(locale, '/')}#projects`}>{t.backToProjects}</a></p>
+
+  {isFallback && t.fallbackNotice && <p class="notice" lang={locale}>{t.fallbackNotice}</p>}
+
+  <header>
+    <h1>{data.title}</h1>
+    {data.status === 'in-progress' && <span class="stamp">{ui[isFallback ? 'en' : locale].inProgress}</span>}
+    <p class="summary">{data.summary}</p>
+  </header>
+
+  <dl class="facts">
+    <div><dt>{t.role}</dt><dd>{data.role}</dd></div>
+    {data.team && <div><dt>{t.team}</dt><dd>{data.team}</dd></div>}
+    <div><dt>{t.stack}</dt><dd>{data.stack.join(', ')}</dd></div>
+    {data.hardware && <div><dt>{t.hardware}</dt><dd>{data.hardware.join(', ')}</dd></div>}
+    <div><dt>{t.year}</dt><dd>{data.date.getUTCFullYear()}</dd></div>
+    {
+      data.links.length > 0 && (
+        <div>
+          <dt>{t.links}</dt>
+          <dd>
+            {data.links.map((link, i) => (
+              <>
+                {i > 0 && ', '}
+                <a href={link.url}>{link.label}</a>
+              </>
+            ))}
+          </dd>
+        </div>
+      )
+    }
+  </dl>
+
+  <div class="body">
+    <Content components={{ Figure, Video }} />
+  </div>
+</article>
+
+<style>
+  article {
+    padding-top: calc(var(--cell) * 1.5);
+    counter-reset: figure;
+  }
+
+  .back {
+    margin: 0 0 var(--cell);
+    font-family: var(--font-display);
+    font-size: 1rem;
+  }
+
+  .notice {
+    max-width: var(--measure);
+    padding: 0.6rem 1rem;
+    border-left: 3px solid var(--margin-rule);
+    background: var(--paper-raised);
+    font-style: italic;
+  }
+
+  header {
+    position: relative;
+    max-width: 52rem;
+  }
+
+  h1 {
+    margin: 0 0 1rem;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-stretch: 65%;
+    font-weight: 800;
+    line-height: 0.98;
+  }
+
+  .stamp {
+    display: inline-block;
+    margin-bottom: 1rem;
+    padding: 0.15rem 0.6rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-stretch: 75%;
+    font-size: 1.1rem;
+    color: var(--margin-rule);
+    border: 2px solid var(--margin-rule);
+    transform: rotate(-3deg);
+  }
+
+  .summary {
+    margin: 0;
+    max-width: var(--measure);
+    font-size: 1.3rem;
+    line-height: 1.5;
+  }
+
+  .facts {
+    margin: calc(var(--cell) * 1.5) 0 calc(var(--cell) * 2);
+    max-width: 52rem;
+    border-top: 1.5px solid var(--ink);
+  }
+
+  .facts div {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr;
+    gap: 1rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--grid-major);
+  }
+
+  dt {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  @media (max-width: 499px) {
+    .facts div {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+
+  .body {
+    max-width: var(--measure);
+  }
+
+  .body :global(h2) {
+    margin: calc(var(--cell) * 2) 0 0.5rem;
+    font-size: 1.75rem;
+    font-stretch: 75%;
+  }
+
+  .body :global(h3) {
+    margin: 1.75rem 0 0.25rem;
+    font-size: 1.25rem;
+  }
+
+  .body :global(li) {
+    margin-bottom: 0.35rem;
+  }
+
+  .body :global(table) {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 1rem;
+  }
+
+  .body :global(th),
+  .body :global(td) {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.4rem 0.75rem 0.4rem 0;
+    border-bottom: 1px solid var(--grid-major);
+  }
+
+  .body :global(th) {
+    font-family: var(--font-display);
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+</style>

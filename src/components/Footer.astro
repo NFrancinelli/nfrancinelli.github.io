@@ -1,0 +1,59 @@
+---
+import { ui, type Locale } from '../i18n';
+import { site } from '../site';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = ui[locale];
+---
+
+<footer class="sheet" id="contact">
+  <h2>{t.contactTitle}</h2>
+  <p>{t.contactText}</p>
+  <ul>
+    <li><a href={`mailto:${site.email}`}>{site.email}</a></li>
+    <li><a href={site.linkedin}>LinkedIn</a></li>
+    <li><a href={site.github}>GitHub</a></li>
+  </ul>
+  <p class="small">{site.location}</p>
+  <p class="small"><a href="https://github.com/NFrancinelli/nfrancinelli.github.io">{t.footerSource}</a></p>
+</footer>
+
+<style>
+  footer {
+    padding-block: calc(var(--cell) * 2) calc(var(--cell) * 3);
+    border-top: 1px solid var(--ink);
+  }
+
+  h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.5rem;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  ul {
+    list-style: none;
+    margin: 1rem 0 2rem;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2rem;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+  }
+
+  .small {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .small a {
+    color: var(--muted);
+  }
+</style>

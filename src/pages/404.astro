@@ -1,0 +1,167 @@
+---
+import Base from '../layouts/Base.astro';
+import { ui } from '../i18n';
+const t = ui.en;
+---
+
+<Base locale="en" title={t.notFoundTitle} description={t.notFoundText}>
+  <div class="lost">
+    <svg class="robot" viewBox="0 0 360 260" aria-hidden="true">
+      <!-- The route it took, ending at a dead end. -->
+      <path class="trail" d="M10 214 H70 L96 196 H112" />
+      <g class="wall">
+        <rect x="290" y="88" width="16" height="16" />
+        <rect x="290" y="112" width="16" height="16" />
+        <rect x="290" y="136" width="16" height="16" />
+        <rect x="290" y="160" width="16" height="16" />
+        <rect x="290" y="184" width="16" height="16" />
+        <rect x="314" y="184" width="16" height="16" />
+        <rect x="266" y="88" width="16" height="16" />
+      </g>
+      <line class="ground" x1="0" y1="232" x2="360" y2="232" />
+
+      <!-- Wheels and body. -->
+      <circle class="part" cx="150" cy="214" r="16" />
+      <circle class="part" cx="222" cy="214" r="16" />
+      <circle class="hub" cx="150" cy="214" r="3" />
+      <circle class="hub" cx="222" cy="214" r="3" />
+      <rect class="part" x="122" y="140" width="128" height="62" rx="8" />
+      <line class="detail" x1="140" y1="162" x2="176" y2="162" />
+      <line class="detail" x1="140" y1="176" x2="166" y2="176" />
+      <circle class="led" cx="228" cy="170" r="6" />
+
+      <!-- Arms hanging down. -->
+      <path class="part" d="M122 156 Q104 170 106 196" />
+      <path class="part" d="M250 156 Q268 170 266 196" />
+
+      <!-- Head, tilted down and away from the wall. -->
+      <g transform="rotate(-9 186 104)">
+        <rect class="part" x="146" y="72" width="80" height="58" rx="10" />
+        <line class="part" x1="186" y1="130" x2="186" y2="140" />
+        <!-- Drooping antenna. -->
+        <path class="part" d="M186 72 V56 Q186 40 166 42" />
+        <circle class="part" cx="160" cy="44" r="6" />
+        <!-- Sad brows, eyes and mouth. -->
+        <path class="detail" d="M160 90 L174 86" />
+        <path class="detail" d="M198 86 L212 90" />
+        <circle class="eye" cx="168" cy="99" r="4" />
+        <circle class="eye" cx="204" cy="99" r="4" />
+        <path class="detail" d="M170 120 Q186 110 202 120" />
+        <path class="tear" d="M208 104 Q202 115 208 120 Q214 115 208 104 Z" />
+      </g>
+
+      <!-- No frontier left to explore. -->
+      <text class="query" x="246" y="62">?</text>
+    </svg>
+
+    <div class="text">
+      <h1>{t.notFoundTitle}</h1>
+      <p>{t.notFoundText}</p>
+      <p lang="fr">{ui.fr.notFoundText}</p>
+      <p class="links">
+        <a href="/">{t.notFoundLink}</a>
+        <a href="/fr/" lang="fr">{ui.fr.notFoundLink}</a>
+      </p>
+    </div>
+  </div>
+</Base>
+
+<style>
+  .lost {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(var(--cell) * 2);
+    padding-top: calc(var(--cell) * 3);
+  }
+
+  .robot {
+    width: min(100%, 22rem);
+    height: auto;
+    flex: none;
+  }
+
+  .part,
+  .detail {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  rect.part,
+  circle.part {
+    fill: var(--paper-raised);
+  }
+
+  .detail {
+    stroke-width: 2.5;
+  }
+
+  .hub,
+  .eye {
+    fill: var(--ink);
+  }
+
+  .led {
+    fill: var(--paper-raised);
+    stroke: var(--margin-rule);
+    stroke-width: 2.5;
+  }
+
+  .tear {
+    fill: var(--pen-6);
+  }
+
+  .wall rect {
+    fill: var(--wall);
+  }
+
+  .ground {
+    stroke: var(--grid-major);
+    stroke-width: 2;
+  }
+
+  .trail {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 2;
+    stroke-dasharray: 3 6;
+    stroke-linecap: round;
+  }
+
+  .query {
+    font-family: var(--font-display);
+    font-size: 40px;
+    font-weight: 700;
+    fill: var(--margin-rule);
+  }
+
+  .text {
+    flex: 1 1 18rem;
+    max-width: var(--measure);
+  }
+
+  h1 {
+    margin: 0 0 1rem;
+    font-size: 3rem;
+    font-stretch: 65%;
+  }
+
+  .text p {
+    margin: 0 0 0.75rem;
+  }
+
+  .text p[lang='fr'] {
+    color: var(--muted);
+  }
+
+  .text .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-top: 1.25rem;
+    font-family: var(--font-display);
+  }
+</style>

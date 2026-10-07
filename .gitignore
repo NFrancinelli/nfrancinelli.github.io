@@ -1,0 +1,22 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+
+# environment
+.env
+.env.*
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# private files that must never be published
+test.html
+FRANCINELLI_CV_EN.pdf

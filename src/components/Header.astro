@@ -1,0 +1,107 @@
+---
+import { cvUrl } from '../cv';
+import { localePath, ui, type Locale } from '../i18n';
+import LangSwitch from './LangSwitch.astro';
+import { site } from '../site';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = ui[locale];
+
+// The CV link appears once the PDF has been added to public/cv/.
+const cv = cvUrl(locale);
+
+const path = Astro.url.pathname;
+const isAbout = path.endsWith('/about/');
+---
+
+<header class="sheet">
+  <a class="name" href={localePath(locale, '/')}>{site.name}</a>
+  <nav aria-label={locale === 'fr' ? 'Principale' : 'Main'}>
+    <a href={`${localePath(locale, '/')}#projects`}>{t.navProjects}</a>
+    <a href={localePath(locale, '/about/')} aria-current={isAbout ? 'page' : undefined}>{t.navAbout}</a>
+    {cv && <a href={cv}>{t.navCv}</a>}
+  </nav>
+  <div class="lang">
+    <LangSwitch locale={locale} />
+  </div>
+</header>
+
+<style>
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 2rem;
+    padding-block: calc(var(--cell) * 1.5) var(--cell);
+    font-family: var(--font-display);
+  }
+
+  .name {
+    font-weight: 700;
+    font-stretch: 80%;
+    font-size: 1.35rem;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    color: var(--ink);
+  }
+
+  nav {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  nav a {
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  nav a:hover,
+  nav a[aria-current='page'] {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+
+  /* Kept apart from the page links: it changes the language, not the page. */
+  .lang {
+    display: flex;
+    align-self: center;
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--grid-major);
+  }
+
+  /* Phones: name and language on the first row, page links under the name. */
+  @media (max-width: 699px) {
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        'name lang'
+        'nav nav';
+      align-items: center;
+      gap: 0.6rem 1rem;
+    }
+
+    .name {
+      grid-area: name;
+    }
+
+    nav {
+      grid-area: nav;
+      margin-left: 0;
+    }
+
+    .lang {
+      grid-area: lang;
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+</style>

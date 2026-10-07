@@ -1,0 +1,116 @@
+---
+title: Visual-inertial SLAM on a PX4 Vision drone
+summary: A 3D point-cloud map of the LS2N drone arena, built from a PX4 Vision drone's depth camera, IMU and motion-capture odometry with Google Cartographer on ROS 2.
+status: complete
+date: 2022-06-19
+thumbnail: ./images/point-cloud-map.png
+thumbnailAlt: Dense white point cloud of the drone arena on a dark background, with the floor grid visible in the centre.
+role: Co-developer. Ke Guo and I pair-programmed the whole system.
+team: Nicolás Francinelli and Ke Guo, supervised by Damien Six and Olivier Kermorgant (LS2N, École Centrale de Nantes)
+stack: [ROS 2 Galactic, Google Cartographer, C++, Python, RViz, Ubuntu 20.04]
+hardware: [PX4 Vision (Pixhawk 4, UP Core), Structure Core depth camera, 8-camera motion-capture system]
+links:
+  - label: Code on GitHub
+    url: https://github.com/GUOkekkk/VI-SLAM_PX4Vision
+  - label: Project report (PDF)
+    url: /media/vi-slam/SLAM_with_UAV_report.pdf
+---
+
+import arena from './images/arena-front.png';
+import map from './images/point-cloud-map.png';
+import frontReal from './images/compare-front-real.png';
+import frontMap from './images/compare-front-map.png';
+import rightReal from './images/compare-right-real.png';
+import rightMap from './images/compare-right-map.png';
+
+## The problem
+
+Indoors there is no GPS, so a drone that has to fly somewhere new first needs a map and a way to know where it is on that map. The goal of this master's project was to build a 3D map of the LS2N drone arena using only the sensors on a PX4 Vision drone, as the first step towards flying planned trajectories inside it.
+
+<Figure
+  src={arena}
+  alt="A netted flight cage, about four metres tall, with an aluminium truss frame, a large green fan unit in front and ventilation pipes on the back wall."
+  caption="The LS2N drone arena: a 6 × 3.5 × 4 m netted volume tracked by eight motion-capture cameras."
+/>
+
+## How it works
+
+The drone carries a Structure Core depth camera with its own IMU. An EKF on the drone fuses motion-capture poses with the flight controller's IMU into odometry. Google Cartographer takes all three:
+
+| Input | Source | Role in SLAM |
+| --- | --- | --- |
+| Point clouds | Structure Core depth camera | Scan matching into 3D submaps |
+| Angular rate and acceleration | Structure Core IMU | Pose extrapolation between scans |
+| Odometry | EKF (motion capture + drone IMU) | Initial guess for each new scan |
+
+Cartographer works in two layers. **Local SLAM** filters each point cloud (band-pass on range, then voxel and adaptive voxel filters), matches it against the current submap and inserts it. Submaps drift slowly, so **global SLAM** runs in the background, searches for loop closures between new scans and older submaps, and optimises the resulting pose graph to keep the whole map consistent.
+
+## What we built
+
+Cartographer only works if every sensor frame is placed correctly relative to the drone, so most of the work was in the plumbing around it:
+
+- **A ROS 2 node in C++** that subscribes to the EKF odometry and publishes the `odom → base_link` transform. Cartographer needs it as a TF, not as a topic.
+- **Static transforms** for the drone body, depth sensor and IMU frames. We found the correct orientations by testing each sensor until the point cloud lined up with the arena.
+- **A depth camera driver.** The manufacturer's SDK wasn't reliable on our setup. We started writing our own ROS 2 driver and finally used the one written by our supervisor.
+- **Recorded rosbags**, so we could tune Cartographer offline without flying for every change.
+- **A Cartographer configuration** for 3D trajectories, with the IMU as the tracking frame and odometry enabled, plus a single launch file that starts the whole pipeline.
+
+```cpp
+void handle_drone_pose(const nav_msgs::msg::Odometry & msg)
+{
+  geometry_msgs::msg::TransformStamped t;
+  t.header.stamp = this->get_clock()->now();
+  t.header.frame_id = "odom";
+  t.child_frame_id = "base_link";
+
+  t.transform.translation.x = msg.pose.pose.position.x;
+  t.transform.translation.y = msg.pose.pose.position.y;
+  t.transform.translation.z = msg.pose.pose.position.z;
+  t.transform.rotation.x = msg.pose.pose.orientation.x;
+  t.transform.rotation.y = msg.pose.pose.orientation.y;
+  t.transform.rotation.z = msg.pose.pose.orientation.z;
+  t.transform.rotation.w = msg.pose.pose.orientation.w;
+
+  tf_broadcaster_->sendTransform(t);
+}
+```
+
+## Results
+
+<Video
+  src="/media/vi-slam/flight-demo.mp4"
+  poster="/media/vi-slam/poster.jpg"
+  caption="A 12-second fly-through of the finished point-cloud map in RViz."
+/>
+
+<Figure
+  src={map}
+  alt="Point cloud of the arena seen from above at an angle, with dense walls on both sides and the RViz floor grid in the middle."
+  caption="The final 3D point-cloud map of the arena in RViz."
+/>
+
+The map is noisy, but the main structures are there. From the front, the ventilation pipes on the back wall and the large fan unit are both recognisable. From the side, you can make out the windows and the door.
+
+<Figure
+  pair={[
+    { src: frontReal, alt: 'Front photo of the arena with the ventilation pipe and the fan unit circled in red.' },
+    { src: frontMap, alt: 'Point cloud from the same viewpoint, with the pipe and the fan unit circled in red.' },
+  ]}
+  caption="Front view of the arena (left) and of the map (right). The pipes and the fan unit appear in both."
+/>
+
+<Figure
+  pair={[
+    { src: rightReal, alt: 'Side photo of the arena with the windows and the door circled in red.' },
+    { src: rightMap, alt: 'Point cloud from the same side, with the windows and the door circled in red.' },
+  ]}
+  caption="Side view of the arena (left) and of the map (right). The windows and the door appear in both."
+/>
+
+## What I would do differently
+
+The drone required ROS 2 Galactic, and Cartographer's ROS 2 port for Galactic was still in development, missing tools that would have improved the map. With what I know now, I would:
+
+- tune the depth sensor's configuration and give Cartographer realistic sensor covariances, which is where most of the smearing comes from;
+- map the arena offline first, then use that map only for localisation in flight;
+- use the map to fly planned trajectories. Nav2 is built for ground robots and doesn't handle a drone's 3D motion well, which is the gap my [current project](/projects/3d-planner/) addresses.

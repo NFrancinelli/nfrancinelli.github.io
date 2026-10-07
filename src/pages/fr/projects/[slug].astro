@@ -1,0 +1,17 @@
+---
+import Base from '../../../layouts/Base.astro';
+import ProjectPage from '../../../components/ProjectPage.astro';
+import { getProjects, type Project } from '../../../projects';
+
+export async function getStaticPaths() {
+  const projects = await getProjects('fr');
+  return projects.map((project) => ({ params: { slug: project.slug }, props: { project } }));
+}
+
+const { project } = Astro.props as { project: Project };
+const { data } = project.entry;
+---
+
+<Base locale="fr" title={data.title} description={data.summary}>
+  <ProjectPage locale="fr" project={project} />
+</Base>

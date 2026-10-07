@@ -1,0 +1,116 @@
+---
+title: SLAM visuel-inertiel sur un drone PX4 Vision
+summary: Une carte 3D en nuage de points de l’arène drones du LS2N, construite à partir de la caméra de profondeur, de l’IMU et de l’odométrie par capture de mouvement d’un drone PX4 Vision, avec Google Cartographer sous ROS 2.
+status: complete
+date: 2022-06-19
+thumbnail: ./images/point-cloud-map.png
+thumbnailAlt: Nuage de points blanc et dense de l’arène sur fond sombre, avec la grille du sol visible au centre.
+role: Co-développeur. Ke Guo et moi avons développé l’ensemble du système en binôme.
+team: Nicolás Francinelli et Ke Guo, encadrés par Damien Six et Olivier Kermorgant (LS2N, École Centrale de Nantes)
+stack: [ROS 2 Galactic, Google Cartographer, C++, Python, RViz, Ubuntu 20.04]
+hardware: [PX4 Vision (Pixhawk 4, UP Core), caméra de profondeur Structure Core, système de capture de mouvement à 8 caméras]
+links:
+  - label: Code sur GitHub
+    url: https://github.com/GUOkekkk/VI-SLAM_PX4Vision
+  - label: Rapport du projet (PDF, en anglais)
+    url: /media/vi-slam/SLAM_with_UAV_report.pdf
+---
+
+import arena from './images/arena-front.png';
+import map from './images/point-cloud-map.png';
+import frontReal from './images/compare-front-real.png';
+import frontMap from './images/compare-front-map.png';
+import rightReal from './images/compare-right-real.png';
+import rightMap from './images/compare-right-map.png';
+
+## Le problème
+
+En intérieur, il n’y a pas de GPS : un drone qui doit voler dans un lieu inconnu a d’abord besoin d’une carte et d’un moyen de se situer dessus. L’objectif de ce projet de master était de construire une carte 3D de l’arène drones du LS2N avec les seuls capteurs d’un drone PX4 Vision, première étape avant d’y faire voler des trajectoires planifiées.
+
+<Figure
+  src={arena}
+  alt="Une cage de vol grillagée d’environ quatre mètres de haut, avec une structure en treillis aluminium, une grande soufflerie verte au premier plan et des gaines de ventilation au mur du fond."
+  caption="L’arène drones du LS2N : un volume grillagé de 6 × 3,5 × 4 m suivi par huit caméras de capture de mouvement."
+/>
+
+## Fonctionnement
+
+Le drone embarque une caméra de profondeur Structure Core dotée de sa propre IMU. Un EKF fusionne les poses de la capture de mouvement avec l’IMU du contrôleur de vol pour produire l’odométrie. Google Cartographer utilise les trois :
+
+| Entrée | Source | Rôle dans le SLAM |
+| --- | --- | --- |
+| Nuages de points | Caméra de profondeur Structure Core | Recalage dans des sous-cartes 3D |
+| Vitesse angulaire et accélération | IMU de la Structure Core | Extrapolation de la pose entre deux scans |
+| Odométrie | EKF (capture de mouvement + IMU du drone) | Estimation initiale pour chaque scan |
+
+Cartographer fonctionne sur deux niveaux. Le **SLAM local** filtre chaque nuage de points (filtre passe-bande sur la distance, puis filtres voxel et voxel adaptatif), le recale sur la sous-carte en cours et l’y insère. Les sous-cartes dérivent lentement : le **SLAM global** tourne donc en arrière-plan, cherche des fermetures de boucle entre les nouveaux scans et les anciennes sous-cartes, et optimise le graphe de poses obtenu pour garder une carte cohérente.
+
+## Ce que nous avons développé
+
+Cartographer ne fonctionne que si chaque repère capteur est correctement placé par rapport au drone. L’essentiel du travail a donc porté sur l’intégration autour de lui :
+
+- **Un nœud ROS 2 en C++** qui s’abonne à l’odométrie de l’EKF et publie la transformation `odom → base_link`. Cartographer en a besoin sous forme de TF, pas de topic.
+- **Des transformations statiques** pour les repères du drone, du capteur de profondeur et de l’IMU. Nous avons trouvé les bonnes orientations en testant chaque capteur jusqu’à ce que le nuage de points s’aligne avec l’arène.
+- **Un driver pour la caméra de profondeur.** Le SDK du fabricant n’était pas fiable sur notre configuration. Nous avons commencé à écrire notre propre driver ROS 2, puis utilisé celui de notre encadrant.
+- **Des rosbags enregistrés**, pour régler Cartographer hors ligne sans refaire voler le drone à chaque modification.
+- **Une configuration de Cartographer** pour des trajectoires 3D, avec l’IMU comme repère de suivi et l’odométrie activée, et un fichier de lancement unique qui démarre toute la chaîne.
+
+```cpp
+void handle_drone_pose(const nav_msgs::msg::Odometry & msg)
+{
+  geometry_msgs::msg::TransformStamped t;
+  t.header.stamp = this->get_clock()->now();
+  t.header.frame_id = "odom";
+  t.child_frame_id = "base_link";
+
+  t.transform.translation.x = msg.pose.pose.position.x;
+  t.transform.translation.y = msg.pose.pose.position.y;
+  t.transform.translation.z = msg.pose.pose.position.z;
+  t.transform.rotation.x = msg.pose.pose.orientation.x;
+  t.transform.rotation.y = msg.pose.pose.orientation.y;
+  t.transform.rotation.z = msg.pose.pose.orientation.z;
+  t.transform.rotation.w = msg.pose.pose.orientation.w;
+
+  tf_broadcaster_->sendTransform(t);
+}
+```
+
+## Résultats
+
+<Video
+  src="/media/vi-slam/flight-demo.mp4"
+  poster="/media/vi-slam/poster.jpg"
+  caption="Un survol de 12 secondes de la carte finale en nuage de points dans RViz."
+/>
+
+<Figure
+  src={map}
+  alt="Nuage de points de l’arène vu de dessus en biais, avec des murs denses de chaque côté et la grille du sol de RViz au centre."
+  caption="La carte 3D finale de l’arène dans RViz."
+/>
+
+La carte est bruitée, mais les structures principales sont là. De face, on reconnaît les gaines de ventilation du mur du fond et la grande soufflerie. De côté, on distingue les fenêtres et la porte.
+
+<Figure
+  pair={[
+    { src: frontReal, alt: 'Photo de face de l’arène, la gaine de ventilation et la soufflerie entourées en rouge.' },
+    { src: frontMap, alt: 'Nuage de points vu du même angle, la gaine et la soufflerie entourées en rouge.' },
+  ]}
+  caption="Vue de face de l’arène (à gauche) et de la carte (à droite). Les gaines et la soufflerie apparaissent dans les deux."
+/>
+
+<Figure
+  pair={[
+    { src: rightReal, alt: 'Photo de côté de l’arène, les fenêtres et la porte entourées en rouge.' },
+    { src: rightMap, alt: 'Nuage de points vu du même côté, les fenêtres et la porte entourées en rouge.' },
+  ]}
+  caption="Vue de côté de l’arène (à gauche) et de la carte (à droite). Les fenêtres et la porte apparaissent dans les deux."
+/>
+
+## Ce que je ferais différemment
+
+Le drone imposait ROS 2 Galactic, et le portage ROS 2 de Cartographer pour Galactic était encore en développement, sans certains outils qui auraient amélioré la carte. Avec le recul, je :
+
+- réglerais la configuration du capteur de profondeur et donnerais à Cartographer des covariances capteurs réalistes, d’où vient l’essentiel du flou ;
+- cartographierais d’abord l’arène hors ligne, puis n’utiliserais cette carte que pour la localisation en vol ;
+- utiliserais la carte pour faire voler des trajectoires planifiées. Nav2 est conçu pour les robots terrestres et gère mal le mouvement 3D d’un drone : c’est précisément ce que traite mon [projet en cours](/fr/projects/3d-planner/).

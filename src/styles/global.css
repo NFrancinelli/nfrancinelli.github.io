@@ -1,0 +1,185 @@
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource-variable/source-serif-4/opsz.css';
+@import '@fontsource-variable/source-serif-4/opsz-italic.css';
+@import '@fontsource-variable/jetbrains-mono/wght.css';
+
+/* Engineering computation pad: pale green paper, blue ballpoint, red margin rule. */
+:root {
+  --paper: #eef2e4;
+  --paper-raised: #f6f8f0;
+  --grid-minor: #d9e2cb;
+  --grid-major: #c3d1b0;
+  --ink: #1e2b63;
+  --text: #2a2e31;
+  --muted: #5b6358;
+  --margin-rule: #c4472f;
+  --explored: rgb(30 43 99 / 0.07);
+  --wall: #1e2b63;
+  /* One pen per robot on the home page map. */
+  --pen-1: #1e2b63;
+  --pen-2: #c4472f;
+  --pen-3: #2f6e3e;
+  --pen-4: #6a3d8f;
+  --pen-5: #8a5d0c;
+  --pen-6: #1d6f73;
+
+  --cell: 24px;
+  --font-display: 'Archivo Variable', 'Arial Narrow', system-ui, sans-serif;
+  --font-body: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
+  --font-code: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+
+  --gutter: clamp(16px, 4vw, 48px);
+  --margin-x: 64px;
+  --measure: 66ch;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #141a17;
+    --paper-raised: #1a221d;
+    --grid-minor: #1d2620;
+    --grid-major: #26322a;
+    --ink: #aebcf7;
+    --text: #dbe1d4;
+    --muted: #97a291;
+    --margin-rule: #e07a5f;
+    --explored: rgb(174 188 247 / 0.08);
+    --wall: #aebcf7;
+    --pen-1: #aebcf7;
+    --pen-2: #e88a6f;
+    --pen-3: #7cc28a;
+    --pen-4: #c39be0;
+    --pen-5: #e0b25a;
+    --pen-6: #6fc4c7;
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  background-size:
+    calc(var(--cell) * 5) calc(var(--cell) * 5),
+    calc(var(--cell) * 5) calc(var(--cell) * 5),
+    var(--cell) var(--cell),
+    var(--cell) var(--cell);
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  font-optical-sizing: auto;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: var(--ink);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--margin-rule);
+  outline-offset: 3px;
+}
+
+code,
+pre {
+  font-family: var(--font-code);
+  font-size: 0.88em;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem 1.25rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--grid-major);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  line-height: 1.1;
+  font-weight: 700;
+  font-stretch: 85%;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  padding: 0.5rem 1rem;
+  background: var(--ink);
+  color: var(--paper);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  left: 1rem;
+}
+
+/* The sheet: page content sits right of the red margin rule. */
+.sheet {
+  position: relative;
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@media (min-width: 900px) {
+  .sheet {
+    padding-left: calc(var(--margin-x) + var(--gutter));
+  }
+
+  .sheet::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--margin-x);
+    border-left: 1px solid var(--margin-rule);
+    opacity: 0.7;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

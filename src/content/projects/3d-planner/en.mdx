@@ -1,0 +1,50 @@
+---
+title: A 3D path planner for an autonomous drone
+summary: My own 3D planner flying a simulated PX4 drone through obstacles at different heights, using an OctoMap built from its depth camera. I’m building it now and logging progress here.
+status: in-progress
+date: 2026-10-05
+thumbnail: ./images/planner-sketch.svg
+thumbnailAlt: Isometric sketch of a drone at a low start point and a target marked high up, with a red path climbing over and around box-shaped obstacles.
+role: Sole developer
+stack: [C++, ROS 2, PX4 SITL, OctoMap, Gazebo Harmonic]
+links: []
+---
+
+import sketch from './images/planner-sketch.svg';
+
+## Why this project
+
+Most open-source navigation for ROS 2 is built for ground robots. Nav2 plans on a 2D costmap, so a drone using it has to fly at a fixed height like a ground robot that happens to be in the air. That limitation stopped my [VI-SLAM project](/projects/vi-slam/) at mapping: the next step, flying planned trajectories through the map, needed a planner that works in 3D.
+
+This project is that missing step. PX4 handles flight control and OctoMap handles mapping. The planner between them, which turns a 3D goal and a voxel map into a collision-free path, is the part I’m writing myself.
+
+<Figure
+  src={sketch}
+  alt="Isometric sketch: a drone just above the ground on the left, box-shaped obstacles of different heights, and a red path that climbs over a low wall and past two pillars to a goal high up on the right."
+  caption="What the planner has to do: reach a goal in 3D, climbing over and going around obstacles of different heights."
+/>
+
+## Finish line
+
+The project is done when this works end to end, recorded as a 60-second video:
+
+1. In a Gazebo world with obstacles at several heights, the drone takes off.
+2. It receives a 3D goal.
+3. It plans a path with my planner, over an OctoMap built from its own depth camera.
+4. It flies there without collisions and lands.
+
+The code will be public on GitHub, with a README that explains how to run it.
+
+## The stack
+
+| Layer | Tool | Mine? |
+| --- | --- | --- |
+| Simulation | Gazebo Harmonic | No |
+| Flight control and state estimation | PX4 SITL (EKF2) | No |
+| 3D mapping | OctoMap from the simulated depth camera | No |
+| 3D path planning | Planner on the OctoMap | **Yes** |
+| Glue | ROS 2 nodes between PX4, the map and the planner | Yes |
+
+## Progress log
+
+- **October 2026:** Defined the scope and the finish line. Chose Gazebo Harmonic over Isaac Sim because PX4 supports it officially and it runs on the hardware I have.

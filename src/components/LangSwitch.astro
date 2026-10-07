@@ -1,0 +1,107 @@
+---
+// EN/FR slider. It is a link to the same page in the other language; the knob
+// slides across before the browser navigates.
+import { alternatePath, ui, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const other: Locale = locale === 'en' ? 'fr' : 'en';
+const href = alternatePath(Astro.url.pathname, other);
+---
+
+<a class:list={['lang-switch', `on-${locale}`]} href={href} hreflang={other} aria-label={ui[locale].switchTo}>
+  <span class="knob" aria-hidden="true"></span>
+  <span class="opt en" aria-hidden="true">EN</span>
+  <span class="opt fr" aria-hidden="true">FR</span>
+</a>
+
+<script>
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('.lang-switch')) {
+    link.addEventListener('click', (event) => {
+      // Let new-tab clicks and reduced motion go straight through.
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0 || reducedMotion.matches) return;
+      event.preventDefault();
+      link.classList.add('sliding');
+      window.setTimeout(() => (window.location.href = link.href), 180);
+    });
+  }
+</script>
+
+<style>
+  .lang-switch {
+    --w: 2.4rem;
+    position: relative;
+    display: inline-grid;
+    grid-template-columns: var(--w) var(--w);
+    align-items: center;
+    height: 1.85rem;
+    padding: 2px;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: var(--paper-raised);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    color: var(--muted);
+  }
+
+  .knob {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    width: var(--w);
+    border-radius: 999px;
+    background: var(--ink);
+    transition: transform 0.18s ease;
+  }
+
+  .on-fr .knob,
+  .on-en.sliding .knob {
+    transform: translateX(var(--w));
+  }
+
+  .on-fr.sliding .knob {
+    transform: translateX(0);
+  }
+
+  .opt {
+    position: relative;
+    text-align: center;
+    transition: color 0.18s ease;
+  }
+
+  .on-en .en,
+  .on-fr .fr {
+    color: var(--paper-raised);
+  }
+
+  .on-en:hover .fr,
+  .on-fr:hover .en {
+    color: var(--ink);
+  }
+
+  /* While sliding, the labels swap with the knob. */
+  .on-en.sliding .fr,
+  .on-fr.sliding .en {
+    color: var(--paper-raised);
+  }
+
+  .on-en.sliding .en,
+  .on-fr.sliding .fr {
+    color: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .knob,
+    .opt {
+      transition: none;
+    }
+  }
+</style>

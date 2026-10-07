@@ -1,0 +1,356 @@
+---
+import { Image } from 'astro:assets';
+import { localePath, ui, type Locale } from '../i18n';
+import { getProjects } from '../projects';
+import { site } from '../site';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = ui[locale];
+const projects = await getProjects(locale);
+---
+
+<section class="hero" aria-labelledby="hero-name">
+  <!-- On desktop the headline sits on the map as an obstacle; on phones it comes first. -->
+  <div class="intro" data-keep-out>
+    <h1 id="hero-name">{site.name}</h1>
+    <p>{t.headline}</p>
+  </div>
+  <div class="explorer-head">
+    <div class="controls" data-explorer-controls hidden>
+      <button type="button" class="ctl pause" data-action="pause" data-pause={t.pause} data-play={t.play}>{t.pause}</button>
+      <button type="button" class="ctl" data-action="new-map">{t.newMap}</button>
+      <div class="stepper" role="group" aria-labelledby="robots-label">
+        <span id="robots-label">{t.robots}</span>
+        <button type="button" class="ctl step" data-action="remove" aria-label={t.removeRobot}>−</button>
+        <output data-robots aria-live="polite"></output>
+        <button type="button" class="ctl step" data-action="add" aria-label={t.addRobot}>+</button>
+      </div>
+      <button type="button" class="ctl" data-action="plans" aria-pressed="true">{t.showPlans}</button>
+      <span class="mapped"><span data-mapped>0</span>% {t.mapped}</span>
+    </div>
+    <p class="caption">
+      <span class="live">{t.explorerCaption}</span>
+      <span class="still">{t.explorerStatic}</span>
+      <span class="hint">{t.explorerHint}</span>
+    </p>
+  </div>
+  <div class="map">
+    <canvas class="explorer" aria-hidden="true"></canvas>
+  </div>
+</section>
+
+<section id="projects" aria-labelledby="projects-title">
+  <h2 id="projects-title">{t.projectsTitle}</h2>
+  <ol class="plates">
+    {
+      projects.map(({ slug, entry }, n) => (
+        <li class="plate">
+          <a href={localePath(locale, `/projects/${slug}/`)}>
+            <div class="frame">
+              <Image src={entry.data.thumbnail} alt={entry.data.thumbnailAlt} width={720} />
+              {entry.data.status === 'in-progress' && <span class="stamp">{t.inProgress}</span>}
+            </div>
+            <h3>
+              <span class="fig">
+                {t.figure} {n + 1}.
+              </span>{' '}
+              {entry.data.title}
+            </h3>
+          </a>
+          <p>{entry.data.summary}</p>
+          <p class="meta">
+            {entry.data.date.getUTCFullYear()}, {entry.data.stack.slice(0, 4).join(', ')}
+          </p>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<script>
+  import { MAX_ROBOTS, MIN_ROBOTS, startExplorer } from '../scripts/explorer';
+
+  const canvas = document.querySelector<HTMLCanvasElement>('canvas.explorer');
+  const controls = document.querySelector<HTMLElement>('[data-explorer-controls]');
+
+  if (canvas && controls) {
+    const button = (action: string) => controls.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)!;
+    const pause = button('pause');
+    const add = button('add');
+    const remove = button('remove');
+    const plans = button('plans');
+    const robotsOut = controls.querySelector<HTMLOutputElement>('[data-robots]')!;
+    const mappedOut = controls.querySelector<HTMLElement>('[data-mapped]')!;
+    // Fewer robots on phones, where the map is small.
+    let robots = window.matchMedia('(max-width: 699px)').matches ? 2 : 4;
+
+    const explorer = startExplorer(
+      canvas,
+      document.querySelector<HTMLElement>('[data-keep-out]'),
+      (stats) => {
+        robots = stats.robots;
+        robotsOut.value = String(stats.robots);
+        mappedOut.textContent = String(stats.explored);
+        pause.textContent = stats.paused ? pause.dataset.play! : pause.dataset.pause!;
+        remove.disabled = stats.robots <= MIN_ROBOTS;
+        add.disabled = stats.robots >= MAX_ROBOTS;
+      },
+      robots,
+    );
+
+    if (explorer) {
+      controls.hidden = false;
+      pause.addEventListener('click', () => explorer.togglePause());
+      button('new-map').addEventListener('click', () => explorer.newMap());
+      add.addEventListener('click', () => explorer.setRobotCount(robots + 1));
+      remove.addEventListener('click', () => explorer.setRobotCount(robots - 1));
+      plans.addEventListener('click', () => {
+        const show = plans.getAttribute('aria-pressed') !== 'true';
+        plans.setAttribute('aria-pressed', String(show));
+        explorer.setShowPlans(show);
+      });
+    }
+  }
+</script>
+
+<style>
+  .explorer-head {
+    padding-top: calc(var(--cell) * 0.5);
+  }
+
+  .hero {
+    position: relative;
+  }
+
+  .map {
+    position: relative;
+    height: clamp(420px, 72vh, 720px);
+    margin-top: calc(var(--cell) * 0.5);
+  }
+
+  .explorer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    touch-action: pan-y;
+  }
+
+  .intro {
+    position: absolute;
+    z-index: 1;
+    left: calc(var(--cell) * 2);
+    bottom: calc(var(--cell) * 2);
+    max-width: 34rem;
+    padding: calc(var(--cell) * 0.75) var(--cell);
+    background: var(--paper-raised);
+    border: 1.5px solid var(--ink);
+  }
+
+  h1 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(2.6rem, 7vw, 4.75rem);
+    font-stretch: 62%;
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+  }
+
+  .intro p {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.5;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+  }
+
+  .controls[hidden] {
+    display: none;
+  }
+
+  .ctl {
+    min-height: 2rem;
+    padding: 0.2rem 0.75rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--paper-raised);
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .ctl:hover:not(:disabled) {
+    background: var(--explored);
+  }
+
+  .ctl:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .ctl[aria-pressed='true'] {
+    color: var(--paper-raised);
+    background: var(--ink);
+  }
+
+  .pause {
+    min-width: 5.5rem;
+  }
+
+  .stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text);
+  }
+
+  .step {
+    width: 2rem;
+    padding: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .stepper output {
+    min-width: 1.2ch;
+    text-align: center;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .mapped {
+    margin-left: auto;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .caption {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    font-style: italic;
+    color: var(--muted);
+  }
+
+  .still {
+    display: none;
+  }
+
+  .hint {
+    display: block;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live,
+    .pause {
+      display: none;
+    }
+    .still {
+      display: inline;
+    }
+  }
+
+  /* Narrow screens: the headline comes first, above the controls and the map. */
+  @media (max-width: 699px) {
+    .map {
+      height: 320px;
+    }
+
+    .intro {
+      position: static;
+      max-width: none;
+      margin: calc(var(--cell) * 0.5) 0 var(--cell);
+    }
+  }
+
+  #projects {
+    padding-top: calc(var(--cell) * 3);
+  }
+
+  h2 {
+    margin: 0 0 calc(var(--cell) * 1.5);
+    font-size: 2.25rem;
+    font-stretch: 70%;
+  }
+
+  .plates {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    gap: calc(var(--cell) * 2) calc(var(--cell) * 2);
+  }
+
+  .plate a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .frame {
+    position: relative;
+    padding: 8px;
+    background: var(--paper-raised);
+    border: 1px solid var(--ink);
+  }
+
+  .frame :global(img) {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .stamp {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    padding: 0.15rem 0.6rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-stretch: 75%;
+    font-size: 1.05rem;
+    color: var(--margin-rule);
+    background: var(--paper-raised);
+    border: 2px solid var(--margin-rule);
+    transform: rotate(-4deg);
+  }
+
+  h3 {
+    margin: 0.85rem 0 0.35rem;
+    font-size: 1.4rem;
+  }
+
+  .plate a:hover h3 {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.15em;
+  }
+
+  .fig {
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .plate p {
+    margin: 0;
+    max-width: var(--measure);
+  }
+
+  .plate .meta {
+    margin-top: 0.4rem;
+    font-size: 0.92rem;
+    color: var(--muted);
+  }
+</style>

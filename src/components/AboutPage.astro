@@ -1,0 +1,174 @@
+---
+import { cvUrl } from '../cv';
+import { ui, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = ui[locale];
+const cv = cvUrl(locale);
+
+const copy = {
+  en: {
+    intro: [
+      'Double-degree engineer specialised in robotics, control and automation, based in Toulouse. Go-getter, action taker and results oriented. Trilingual and chronically curious. I write the software that lets robots perceive, decide and move: ROS 2 nodes, behaviour trees, motion planning and the simulations used to test them.',
+      'In three years in industry I’ve built control and behaviour-tree nodes and Gazebo simulation plugins for an industrial pick-and-place start-up (Illumo Robotics), automated validation tooling for space mission software (Magellium, for CNES), and autonomous navigation for a mobile EV-charging robot (Capgemini Engineering). I currently work on industrial automation and behaviour-tree–based process control as a consultant for Airbus (ALTEN).',
+    ],
+    cvWith: 'Dates and details are in my',
+    cvLink: 'CV (PDF)',
+    cvWithout: 'Dates and details are in my CV, which I’m happy to send by email.',
+    educationTitle: 'Education',
+    education: [
+      {
+        what: 'M.Sc. Advanced Robotics (CORO / IMARO)',
+        where: 'École Centrale de Nantes, France, 2023',
+        note: 'Student representative of the Control and Robotics master for two years.',
+      },
+      {
+        what: 'Electronics Engineering degree',
+        where: 'Universidad Nacional de La Plata, Argentina, 2021',
+        note: 'Awarded Best Graduate 2020. Teaching assistant in Circuit Theory I for two and a half years.',
+      },
+    ],
+    skillsTitle: 'Skills',
+    skills: [
+      ['Programming', 'C++, C, Python'],
+      ['Robotics', 'ROS 2, ROS, behaviour trees, Gazebo, PX4, OpenCV'],
+      ['Tools', 'Linux, Docker, Git, CUnit, MATLAB/Simulink, CAD, TIA Portal'],
+      ['Certification', 'CodinGame C++ (2022)'],
+      ['Languages', 'Spanish (native), English (C2), French (C2), Italian (A2)'],
+    ],
+  },
+  fr: {
+    intro: [
+      'Ingénieur double diplômé, spécialisé en robotique et automatisation, basé à Toulouse. Proactif, tourné vers l’action et orienté résultats. Trilingue et d’une curiosité insatiable. Je développe le logiciel qui permet aux robots de percevoir, décider et se déplacer : nœuds ROS 2, behaviour trees, planification de mouvement et les simulations qui servent à les tester.',
+      'En trois ans d’industrie, j’ai développé des nœuds de contrôle et des behaviour trees ainsi que des plugins de simulation Gazebo pour une start-up de pick-and-place industriel (Illumo Robotics), des outils de validation automatisée pour un logiciel de mission spatiale (Magellium, pour le CNES) et la navigation autonome d’un robot mobile de recharge de véhicules électriques (Capgemini Engineering). Je travaille actuellement sur l’automatisation industrielle et le pilotage de procédés par behaviour trees, en tant que consultant pour Airbus (ALTEN).',
+    ],
+    cvWith: 'Les dates et le détail sont dans mon',
+    cvLink: 'CV (PDF)',
+    cvWithout: 'Les dates et le détail sont dans mon CV, que je vous envoie volontiers par e-mail.',
+    educationTitle: 'Formation',
+    education: [
+      {
+        what: 'M.Sc. Advanced Robotics (CORO / IMARO)',
+        where: 'École Centrale de Nantes, France, 2023',
+        note: 'Représentant des étudiants du master Commande et Robotique pendant deux ans.',
+      },
+      {
+        what: 'Diplôme d’ingénieur électronicien',
+        where: 'Universidad Nacional de La Plata, Argentine, 2021',
+        note: 'Prix du meilleur diplômé 2020. Assistant d’enseignement en Théorie des circuits I pendant deux ans et demi.',
+      },
+    ],
+    skillsTitle: 'Compétences',
+    skills: [
+      ['Programmation', 'C++, C, Python'],
+      ['Robotique', 'ROS 2, ROS, behaviour trees, Gazebo, PX4, OpenCV'],
+      ['Outils', 'Linux, Docker, Git, CUnit, MATLAB/Simulink, CAO, TIA Portal'],
+      ['Certification', 'CodinGame C++ (2022)'],
+      ['Langues', 'espagnol (natif), anglais (C2), français (C2), italien (A2)'],
+    ],
+  },
+}[locale];
+---
+
+<div class="about">
+  <h1>{t.aboutTitle}</h1>
+  {copy.intro.map((p) => <p>{p}</p>)}
+  <p>
+    {
+      cv ? (
+        <>
+          {copy.cvWith} <a href={cv}>{copy.cvLink}</a>.
+        </>
+      ) : (
+        copy.cvWithout
+      )
+    }
+  </p>
+
+  <h2>{copy.educationTitle}</h2>
+  <dl class="ruled">
+    {
+      copy.education.map((e) => (
+        <div>
+          <dt>{e.what}</dt>
+          <dd>
+            {e.where}
+            <span class="note">{e.note}</span>
+          </dd>
+        </div>
+      ))
+    }
+  </dl>
+
+  <h2>{copy.skillsTitle}</h2>
+  <dl class="ruled">
+    {
+      copy.skills.map(([k, v]) => (
+        <div>
+          <dt>{k}</dt>
+          <dd>{v}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</div>
+
+<style>
+  .about {
+    max-width: var(--measure);
+    padding-top: calc(var(--cell) * 1.5);
+  }
+
+  h1 {
+    margin: 0 0 1.25rem;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-stretch: 65%;
+    font-weight: 800;
+  }
+
+  h2 {
+    margin: calc(var(--cell) * 2) 0 0.75rem;
+    font-size: 1.75rem;
+    font-stretch: 75%;
+  }
+
+  .ruled {
+    margin: 0;
+    border-top: 1.5px solid var(--ink);
+  }
+
+  .ruled div {
+    display: grid;
+    grid-template-columns: minmax(9rem, 16rem) 1fr;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--grid-major);
+  }
+
+  dt {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  .note {
+    display: block;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 599px) {
+    .ruled div {
+      grid-template-columns: 1fr;
+      gap: 0.15rem;
+    }
+  }
+</style>
