@@ -1,0 +1,112 @@
+---
+// Light/dark button. Starts from the computer's setting; a click picks the other
+// theme and remembers it in localStorage (applied early by Base.astro).
+import { ui, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = ui[locale];
+---
+
+<button class="theme-toggle" type="button" data-label-dark={t.themeDark} data-label-light={t.themeLight} aria-label={t.themeDark}>
+  <svg class="moon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+  </svg>
+  <svg class="sun" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" />
+  </svg>
+</button>
+
+<script>
+  const root = document.documentElement;
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const isDark = () => (root.dataset.theme ? root.dataset.theme === 'dark' : systemDark.matches);
+
+  function sync() {
+    const dark = isDark();
+    for (const button of document.querySelectorAll<HTMLButtonElement>('.theme-toggle')) {
+      button.setAttribute('aria-label', (dark ? button.dataset.labelLight : button.dataset.labelDark) ?? '');
+    }
+    // Browser toolbar colour on phones, when a theme has been picked.
+    if (root.dataset.theme) {
+      for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+        meta.content = dark ? '#141a17' : '#eef2e4';
+      }
+    }
+  }
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>('.theme-toggle')) {
+    button.addEventListener('click', () => {
+      const next = isDark() ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try {
+        localStorage.setItem('theme', next);
+      } catch {}
+      sync();
+    });
+  }
+  systemDark.addEventListener('change', sync);
+  sync();
+</script>
+
+<style>
+  .theme-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    padding: 0;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: var(--paper-raised);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .theme-toggle:hover {
+    background: var(--ink);
+    color: var(--paper-raised);
+  }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--margin-rule);
+    outline-offset: 2px;
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Show the theme a click will switch to: moon on light paper, sun on dark. */
+  .sun {
+    display: none;
+  }
+
+  :global(:root[data-theme='dark']) .sun {
+    display: block;
+  }
+
+  :global(:root[data-theme='dark']) .moon {
+    display: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .sun {
+      display: block;
+    }
+
+    :global(:root:not([data-theme='light'])) .moon {
+      display: none;
+    }
+  }
+</style>

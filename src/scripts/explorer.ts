@@ -733,10 +733,13 @@ export function startExplorer(
     updateRunning();
     if (reducedMotion.matches) renderFinished();
   });
-  darkScheme.addEventListener('change', () => {
+  const repaint = () => {
     palette = readPalette();
     if (!running) draw();
-  });
+  };
+  darkScheme.addEventListener('change', repaint);
+  // The header's theme button switches colours by setting data-theme on <html>.
+  new MutationObserver(repaint).observe(document.documentElement, { attributeFilter: ['data-theme'] });
 
   lastWidth = canvas.getBoundingClientRect().width;
   resize();

@@ -21,8 +21,10 @@ export const ui = {
     navCv: 'CV',
     languageLabel: 'Language',
     switchTo: 'Lire en français',
+    themeDark: 'Switch to dark mode',
+    themeLight: 'Switch to light mode',
     headline:
-      'Robotics engineer: C++, Python, ROS/ROS2. 3 years in industry, Electronics Engineer from Universidad Nacional de La Plata and M.Sc. from Ećole Centrale de Nantes.',
+      'Robotics engineer: C++, Python, ROS/ROS2. 3 years in industry, Electronics Engineer from Universidad Nacional de La Plata and M.Sc. from École Centrale de Nantes.',
     explorerCaption:
       'Live: robots exploring an unknown map. Each one heads for the nearest frontier no other robot has claimed, along a path planned with A*.',
     explorerHint: 'Click or drag on the map to add and remove walls.',
@@ -62,6 +64,8 @@ export const ui = {
     navCv: 'CV',
     languageLabel: 'Langue',
     switchTo: 'Read in English',
+    themeDark: 'Passer en mode sombre',
+    themeLight: 'Passer en mode clair',
     headline:
       'Ingénieur en robotique : C++, Python, ROS/ROS2. 3 ans d’expérience en industrie, ingénieur électronicien de l’Universidad Nacional de La Plata, M.Sc. de Centrale Nantes.',
     explorerCaption:

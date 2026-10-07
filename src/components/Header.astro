@@ -2,6 +2,7 @@
 import { cvUrl } from '../cv';
 import { localePath, ui, type Locale } from '../i18n';
 import LangSwitch from './LangSwitch.astro';
+import ThemeToggle from './ThemeToggle.astro';
 import { site } from '../site';
 
 interface Props {
@@ -26,6 +27,7 @@ const isAbout = path.endsWith('/about/');
     {cv && <a href={cv}>{t.navCv}</a>}
   </nav>
   <div class="lang">
+    <ThemeToggle locale={locale} />
     <LangSwitch locale={locale} />
   </div>
 </header>
@@ -72,6 +74,8 @@ const isAbout = path.endsWith('/about/');
   /* Kept apart from the page links: it changes the language, not the page. */
   .lang {
     display: flex;
+    align-items: center;
+    gap: 0.75rem;
     align-self: center;
     padding-left: 1.5rem;
     border-left: 1px solid var(--grid-major);

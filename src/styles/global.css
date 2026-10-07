@@ -35,8 +35,10 @@
   color-scheme: light;
 }
 
+/* Dark paper: follows the computer's setting unless the visitor picked a theme
+   with the header button, which sets data-theme on <html>. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --paper: #141a17;
     --paper-raised: #1a221d;
     --grid-minor: #1d2620;
@@ -55,6 +57,26 @@
     --pen-6: #6fc4c7;
     color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --paper: #141a17;
+  --paper-raised: #1a221d;
+  --grid-minor: #1d2620;
+  --grid-major: #26322a;
+  --ink: #aebcf7;
+  --text: #dbe1d4;
+  --muted: #97a291;
+  --margin-rule: #e07a5f;
+  --explored: rgb(174 188 247 / 0.08);
+  --wall: #aebcf7;
+  --pen-1: #aebcf7;
+  --pen-2: #e88a6f;
+  --pen-3: #7cc28a;
+  --pen-4: #c39be0;
+  --pen-5: #e0b25a;
+  --pen-6: #6fc4c7;
+  color-scheme: dark;
 }
 
 *,
