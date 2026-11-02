@@ -1,50 +1,126 @@
 ---
 title: A 3D path planner for an autonomous drone
-summary: My own 3D planner flying a simulated PX4 drone through obstacles at different heights, using an OctoMap built from its depth camera. I’m building it now and logging progress here.
-status: in-progress
-date: 2026-10-05
-thumbnail: ./images/planner-sketch.svg
-thumbnailAlt: Isometric sketch of a drone at a low start point and a target marked high up, with a red path climbing over and around box-shaped obstacles.
+summary: A 3D path planner I wrote from scratch that flies a simulated PX4 drone to a goal through space it has never seen, on an OctoMap built live from its depth camera. Benchmarked in three factory halls.
+status: complete
+date: 2026-11-02
+thumbnail: ./images/thumbnail.jpg
+thumbnailAlt: "Top-down view of the simulated factory hall from the demo video: walls the drone has mapped in blue, its flown path in green, and its current plan in orange and magenta running along the top aisle."
 role: Sole developer
-stack: [C++, ROS 2, PX4 SITL, OctoMap, Gazebo Harmonic]
-links: []
+stack: [C++, Python, ROS 2 Jazzy, PX4 SITL, OctoMap, Gazebo Harmonic, Docker]
+links:
+  - label: Code on GitHub
+    url: https://github.com/NFrancinelli/drone_path_planner
+  - label: Release with the demo video
+    url: https://github.com/NFrancinelli/drone_path_planner/releases/tag/Milestone_5
 ---
 
-import sketch from './images/planner-sketch.svg';
+import routesBlocked from './images/routes-blocked.png';
+import routesDetour from './images/routes-detour.png';
 
 ## Why this project
 
 Most open-source navigation for ROS 2 is built for ground robots. Nav2 plans on a 2D costmap, so a drone using it has to fly at a fixed height like a ground robot that happens to be in the air. That limitation stopped my [VI-SLAM project](/projects/vi-slam/) at mapping: the next step, flying planned trajectories through the map, needed a planner that works in 3D.
 
-This project is that missing step. PX4 handles flight control and OctoMap handles mapping. The planner between them, which turns a 3D goal and a voxel map into a collision-free path, is the part I’m writing myself.
+This project fills that gap. I wrote a 3D path planner from scratch that lets a PX4 drone fly to a goal through space it has never seen. Everything around it is off-the-shelf: Gazebo Harmonic, PX4 SITL, OctoMap and ROS 2 Jazzy, all in Docker.
 
-<Figure
-  src={sketch}
-  alt="Isometric sketch: a drone just above the ground on the left, box-shaped obstacles of different heights, and a red path that climbs over a low wall and past two pillars to a goal high up on the right."
-  caption="What the planner has to do: reach a goal in 3D, climbing over and going around obstacles of different heights."
+<Video
+  src="/media/3d-planner/demo.mp4"
+  poster="/media/3d-planner/poster.jpg"
+  caption="The 86-second demo. Open hall at the default cost (2× speed), then the return legs of the blocked aisle and the hidden shortcut, two cost values side by side (4× speed). On-screen times are from these takes; the tables below give 3-run averages."
 />
 
-## Finish line
+## Results: how much to trust unseen space
 
-The project is done when this works end to end, recorded as a 60-second video:
+The drone only knows what its depth camera has seen, so when the best route runs through unmapped space, the planner has to decide whether to risk it. A* allows unknown voxels at an extra cost per metre, `unknown_cost`. The benchmarks showed there is no best value. Each setting is a bet, and whether it pays off depends on the hall:
 
-1. In a Gazebo world with obstacles at several heights, the drone takes off.
-2. It receives a 3D goal.
-3. It plans a path with my planner, over an OctoMap built from its own depth camera.
-4. It flies there without collisions and lands.
+- in a hall where the unseen way is a dead end, the cautious setting (10) beat the default by 27 s;
+- in a hall where the unseen way is a shortcut, it lost by 15 s;
+- the default (1) takes the shortcut when there is one, and turns back to the known route once it sees a dead end.
 
-The code will be public on GitHub, with a README that explains how to run it.
+Every benchmark is a two-leg mission, flown 3 times for each value of `unknown_cost` (0, 1 and 10) at half real-time speed. All 18 legs in each hall reached their goal. The closest any run came to an obstacle was 0.41 m, for a drone radius of 0.39 m. Times below are averages of the 3 runs.
 
-## The stack
+**Blocked aisle.** Shelving closes an aisle, out of sight until the drone turns into it.
+
+| `unknown_cost` | Return route | Return time | Distance |
+| --- | --- | --- | --- |
+| 0 | Into the aisle, back out, round the south aisle | 79.0 s | 55.0 m |
+| 1 (default) | Into the aisle, back over the crates | 62.9 s | 41.5 m |
+| 10 | Known corridor | 35.8 s | 23.8 m |
+
+<Figure
+  src={routesBlocked}
+  alt="Top-down plot of the blocked-aisle hall with the return leg of every run. Green lines (cost 10) go straight back along the known corridor; orange (cost 1) go up the blocked aisle and turn back; blue (cost 0) go up the aisle, then round the long south aisle."
+  caption="Blocked aisle, return leg: every run, one colour per value of unknown_cost."
+/>
+
+**Hidden shortcut.** A wall divides the hall, with a door the drone has seen (north) and one it never sees (south).
+
+| `unknown_cost` | Return route | Return time | Distance |
+| --- | --- | --- | --- |
+| 0 | Through the unseen south door | 26.2 s | 17.2 m |
+| 1 (default) | Through the unseen south door | 26.3 s | 17.2 m |
+| 10 | Back through the known north door | 40.9 s | 26.6 m |
+
+<Figure
+  src={routesDetour}
+  alt="Two top-down plots of a hall split by a wall. Leg 1: all runs pass the north end of the wall. Leg 2: green lines (cost 10) go back round the north end; blue and orange (cost 0 and 1) take the shorter route round the unseen south end."
+  caption="Hidden shortcut: both legs, one colour per value of unknown_cost. On the way back, only the cautious setting ignores the shorter unseen route."
+/>
+
+**Open hall.** The return leg can use the corridor mapped on the way out or an unexplored aisle of about the same length, so the cost barely matters: 34.6 s at 0, 36.1 s at 1 and 35.8 s at 10. The difference shows on the outward leg, where the drone at cost 0 is surprised more often (13.7 blocked replans against 8.0 at cost 1).
+
+Caution also costs computation. Higher values make A* expand much more of the hall: up to about 170k expansions and 0.4 s per search at cost 10, against about 9k and 25 ms at cost 0.
+
+## How the planner works
+
+The planner runs A\* on a live OctoMap, built from one forward depth camera (320×240 at 10 Hz, 10 m range, pitched up 12°). Obstacles are inflated and unknown voxels cost extra per metre. Climbing and passing close to obstacles cost extra too, so paths keep their altitude and run down the middle of gaps.
+
+I shortcut the A\* path to a few waypoints and fit a piecewise quintic through them. The result ramps up to max speed, rounds corners within 0.75 m and is collision-checked against the map with the drone's radius. A separate trajectory server streams its position, velocity and acceleration setpoints to PX4 in offboard mode.
+
+The map keeps growing during the flight, so the plan keeps changing. On every map update (5 Hz), the planner checks the rest of the trajectory and replaces it if it hits a newly seen obstacle. Every 2 s it also takes a clearly faster plan if it finds one, meaning at least 1 s and 10 % faster. A new plan takes over 1 s ahead on the current trajectory and matches its position, velocity, acceleration and heading, so the drone never jumps. When it's stuck, the drone brakes to a hover. It brakes immediately if an obstacle would come within 0.4 m before a new plan could take over.
+
+I worked out the speed limit from the stopping distance. At 1 m/s and 1 m/s², the drone needs about 2.0 m to stop after an obstacle appears: 0.75 s of reaction (about 0.9 m), 0.94 m of braking and up to 0.18 m of tracking error. The camera's 10 m range leaves plenty of margin. Occluded corners don't: in the factory, a face comes into view about 2.5 m away. Along the way I measured that PX4 overshoots the commanded speed by about 16 % per m/s² of acceleration, and worked out why.
+
+The camera never sees beside or below the drone, so the planner blocks unknown space within 1.5 m of a plan's start. I call this the known-space rule.
+
+For debugging, every plan can be dumped and replayed offline with `plan_replay`, and `mission_metrics.py` measures each flight.
+
+In the `factory` world, the flight from the start to behind a crate wall takes about ten replans as the hall comes into view. The drone discovers the dead end, climbs over the crates and stops within 15 cm of the goal, in about 40 s.
 
 | Layer | Tool | Mine? |
 | --- | --- | --- |
 | Simulation | Gazebo Harmonic | No |
-| Flight control and state estimation | PX4 SITL (EKF2) | No |
+| Flight control | PX4 SITL v1.17.0, over XRCE-DDS | No |
+| Localization | Simulated motion capture, as in a lab flight arena | No |
 | 3D mapping | OctoMap from the simulated depth camera | No |
-| 3D path planning | Planner on the OctoMap | **Yes** |
-| Glue | ROS 2 nodes between PX4, the map and the planner | Yes |
+| 3D planning, smoothing and replanning | C++ planner core, ROS-free and unit-tested | **Yes** |
+| Trajectory server | C++, streams setpoints to PX4 offboard | **Yes** |
+| Glue and tools | ROS 2 nodes and Python tools | Yes |
 
-## Progress log
+Localization uses simulated motion capture on purpose: it isolates the planner from state-estimation error. Flying on onboard estimation, such as visual-inertial SLAM, is the natural next step.
 
-- **October 2026:** Defined the scope and the finish line. Chose Gazebo Harmonic over Isaac Sim because PX4 supports it officially and it runs on the hardware I have.
+## What the benchmarks found
+
+Four problems only showed up once I started measuring flights, and fixing them changed the design:
+
+- The planner could freeze mid-flight. Braking while the drone was still speeding up searched forever for a duration that fit, and the drone flew its last trajectory blind into the crate wall. Braking now accounts for the starting acceleration, and every duration search is bounded.
+- Low-cost plans turned into the unseen sides of shelving blocks, because the camera can't see sideways: 4 of 6 runs at cost 0 grazed or hit one. That's where the known-space rule comes from.
+- The drone crept down long aisles. The hall has no roof, and OctoMap only maps along rays that hit something, so the space straight ahead stayed unknown. The camera's no-return pixels now become rays that clear space up to 10 m.
+- OctoMap punched holes in walls seen at a grazing angle. Occupied voxels are now sticky, which is safe because the worlds are static.
+
+## Limitations and next steps
+
+- Localization is simulated motion capture, so robustness to onboard estimation error isn't evaluated yet.
+- There is a single forward depth camera. The test worlds have no obstacles directly above or below the flight path, and the walls beside the drone go unseen.
+- It runs in simulation only, in static worlds: obstacles never disappear from the map.
+- Max speed is 1 m/s, limited by occluded corners.
+
+## Milestones
+
+Built between October 8 and November 2, 2026, each milestone tagged in the repository:
+
+1. Infrastructure and offboard control, flying a figure-eight.
+2. Depth camera to OctoMap.
+3. A\* with unknown-space cost, smoothing and collision checking.
+4. Replanning in the factory world.
+5. Unknown-space cost benchmarks and the demo video.

@@ -31,6 +31,11 @@
   --gutter: clamp(16px, 4vw, 48px);
   --margin-x: 64px;
   --measure: 66ch;
+  /* Reading pages (projects, About, 404): the text column grows with the
+     screen, from phone width up to 52rem, and the font grows slightly
+     with it so lines stay around 70-80 characters. */
+  --reading-width: clamp(var(--measure), 58vw, 52rem);
+  --reading-size: clamp(1.125rem, 1rem + 0.35vw, 1.3rem);
 
   color-scheme: light;
 }

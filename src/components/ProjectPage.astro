@@ -140,8 +140,14 @@ const { Content } = await render(entry);
     }
   }
 
+  .body,
+  .summary,
+  .notice {
+    max-width: var(--reading-width);
+  }
+
   .body {
-    max-width: var(--measure);
+    font-size: var(--reading-size);
   }
 
   .body :global(h2) {

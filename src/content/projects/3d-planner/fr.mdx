@@ -1,50 +1,126 @@
 ---
 title: Un planificateur de chemin 3D pour un drone autonome
-summary: Mon propre planificateur 3D, qui fait voler un drone PX4 simulé entre des obstacles de différentes hauteurs à partir d’une OctoMap construite par sa caméra de profondeur. Projet en cours, avec son journal d’avancement.
-status: in-progress
-date: 2026-10-05
-thumbnail: ./images/planner-sketch.svg
-thumbnailAlt: Croquis isométrique d’un drone à un point de départ bas et d’une cible placée en hauteur, avec un chemin rouge qui monte par-dessus et autour d’obstacles en forme de boîtes.
+summary: Un planificateur de chemin 3D écrit de zéro, qui fait voler un drone PX4 simulé jusqu’à un objectif à travers un espace qu’il n’a jamais vu, sur une OctoMap construite en direct par sa caméra de profondeur. Évalué dans trois halls d’usine.
+status: complete
+date: 2026-11-02
+thumbnail: ./images/thumbnail.jpg
+thumbnailAlt: "Vue de dessus du hall d’usine simulé, tirée de la vidéo de démonstration : les murs cartographiés par le drone en bleu, son trajet parcouru en vert, et son plan en cours en orange et magenta le long de l’allée du haut."
 role: Seul développeur
-stack: [C++, ROS 2, PX4 SITL, OctoMap, Gazebo Harmonic]
-links: []
+stack: [C++, Python, ROS 2 Jazzy, PX4 SITL, OctoMap, Gazebo Harmonic, Docker]
+links:
+  - label: Code sur GitHub
+    url: https://github.com/NFrancinelli/drone_path_planner
+  - label: Release avec la vidéo de démonstration
+    url: https://github.com/NFrancinelli/drone_path_planner/releases/tag/Milestone_5
 ---
 
-import sketch from './images/planner-sketch.svg';
+import routesBlocked from './images/routes-blocked.png';
+import routesDetour from './images/routes-detour.png';
 
 ## Pourquoi ce projet
 
 La plupart des outils de navigation open source pour ROS 2 sont conçus pour des robots terrestres. Nav2 planifie sur une carte de coûts 2D : un drone qui l’utilise doit voler à altitude fixe, comme un robot terrestre qui se trouverait dans les airs. C’est cette limite qui a arrêté mon [projet de VI-SLAM](/fr/projects/vi-slam/) à la cartographie : l’étape suivante, faire voler des trajectoires planifiées dans la carte, demandait un planificateur 3D.
 
-Ce projet est cette étape manquante. PX4 gère le contrôle de vol et OctoMap la cartographie. Le planificateur entre les deux, qui transforme un objectif 3D et une carte de voxels en chemin sans collision, est la partie que j’écris moi-même.
+Ce projet comble ce manque. J’ai écrit de zéro un planificateur de chemin 3D qui permet à un drone PX4 de voler jusqu’à un objectif à travers un espace qu’il n’a jamais vu. Tout le reste est existant : Gazebo Harmonic, PX4 SITL, OctoMap et ROS 2 Jazzy, le tout dans Docker.
 
-<Figure
-  src={sketch}
-  alt="Croquis isométrique : un drone juste au-dessus du sol à gauche, des obstacles en forme de boîtes de hauteurs différentes, et un chemin rouge qui monte par-dessus un muret et passe devant deux piliers jusqu’à un objectif en hauteur à droite."
-  caption="Ce que le planificateur doit faire : atteindre un objectif en 3D en montant par-dessus et en contournant des obstacles de hauteurs différentes."
+<Video
+  src="/media/3d-planner/demo.mp4"
+  poster="/media/3d-planner/poster.jpg"
+  caption="La démo de 86 secondes (en anglais). Le hall ouvert au coût par défaut (vitesse ×2), puis les trajets retour de l’allée bloquée et du raccourci caché, deux valeurs de coût côte à côte (vitesse ×4). Les temps à l’écran viennent de ces prises ; les tableaux ci-dessous donnent des moyennes sur 3 vols."
 />
 
-## Critère de fin
+## Résultats : quelle confiance accorder à l’inconnu
 
-Le projet est terminé quand ce scénario fonctionne de bout en bout, enregistré dans une vidéo de 60 secondes :
+Le drone ne connaît que ce que sa caméra de profondeur a vu. Quand le meilleur chemin traverse un espace non cartographié, le planificateur doit donc décider s’il prend le risque. A* autorise les voxels inconnus moyennant un coût supplémentaire par mètre, `unknown_cost`. Les essais ont montré qu’il n’existe pas de meilleure valeur. Chaque réglage est un pari, et c’est le hall qui décide s’il est gagnant :
 
-1. Dans un monde Gazebo avec des obstacles à plusieurs hauteurs, le drone décolle.
-2. Il reçoit un objectif 3D.
-3. Il planifie un chemin avec mon planificateur, sur une OctoMap construite par sa propre caméra de profondeur.
-4. Il s’y rend sans collision et atterrit.
+- dans un hall où le passage inconnu est une impasse, le réglage prudent (10) bat le réglage par défaut de 27 s ;
+- dans un hall où le passage inconnu est un raccourci, il perd de 15 s ;
+- le réglage par défaut (1) prend le raccourci quand il existe, et revient au chemin connu dès qu’il voit une impasse.
 
-Le code sera public sur GitHub, avec un README qui explique comment le lancer.
+Chaque essai est une mission en deux trajets, volée 3 fois pour chaque valeur d’`unknown_cost` (0, 1 et 10), à la moitié du temps réel. Dans chaque hall, les 18 trajets ont atteint leur objectif. Le passage le plus proche d’un obstacle a été de 0,41 m, pour un drone de 0,39 m de rayon. Les temps ci-dessous sont des moyennes sur les 3 vols.
 
-## La pile logicielle
+**Allée bloquée.** Des étagères ferment une allée, hors de vue jusqu’à ce que le drone s’y engage.
+
+| `unknown_cost` | Chemin du retour | Durée du retour | Distance |
+| --- | --- | --- | --- |
+| 0 | Dans l’allée, demi-tour, puis par l’allée sud | 79,0 s | 55,0 m |
+| 1 (défaut) | Dans l’allée, puis retour par-dessus les caisses | 62,9 s | 41,5 m |
+| 10 | Couloir connu | 35,8 s | 23,8 m |
+
+<Figure
+  src={routesBlocked}
+  alt="Vue de dessus du hall à allée bloquée avec le trajet retour de chaque vol. Les lignes vertes (coût 10) reviennent directement par le couloir connu ; les orange (coût 1) montent dans l’allée bloquée et font demi-tour ; les bleues (coût 0) montent dans l’allée puis font le tour par la longue allée sud."
+  caption="Allée bloquée, trajet retour : tous les vols, une couleur par valeur d’unknown_cost."
+/>
+
+**Raccourci caché.** Un mur divise le hall, avec une porte que le drone a vue (au nord) et une qu’il ne voit jamais (au sud).
+
+| `unknown_cost` | Chemin du retour | Durée du retour | Distance |
+| --- | --- | --- | --- |
+| 0 | Par la porte sud jamais vue | 26,2 s | 17,2 m |
+| 1 (défaut) | Par la porte sud jamais vue | 26,3 s | 17,2 m |
+| 10 | Retour par la porte nord connue | 40,9 s | 26,6 m |
+
+<Figure
+  src={routesDetour}
+  alt="Deux vues de dessus d’un hall coupé par un mur. Trajet 1 : tous les vols passent par l’extrémité nord du mur. Trajet 2 : les lignes vertes (coût 10) repassent par le nord ; les bleues et orange (coûts 0 et 1) prennent le chemin plus court par l’extrémité sud jamais vue."
+  caption="Raccourci caché : les deux trajets, une couleur par valeur d’unknown_cost. Au retour, seul le réglage prudent ignore le chemin inconnu plus court."
+/>
+
+**Hall ouvert.** Le retour peut passer par le couloir cartographié à l’aller ou par une allée inexplorée de longueur comparable, donc le coût change peu : 34,6 s à 0, 36,1 s à 1 et 35,8 s à 10. La différence se voit à l’aller, où le drone à coût 0 est plus souvent surpris (13,7 replanifications pour blocage contre 8,0 à coût 1).
+
+La prudence coûte aussi en calcul. Les valeurs élevées font explorer à A* une bien plus grande partie du hall : jusqu’à environ 170 000 expansions et 0,4 s par recherche à coût 10, contre environ 9 000 et 25 ms à coût 0.
+
+## Fonctionnement du planificateur
+
+Le planificateur fait tourner A\* sur une OctoMap en direct, construite par une seule caméra de profondeur frontale (320×240 à 10 Hz, portée de 10 m, inclinée de 12° vers le haut). Les obstacles sont gonflés et les voxels inconnus coûtent un supplément par mètre. Monter et passer près des obstacles coûtent aussi un supplément : les chemins gardent leur altitude et passent au milieu des passages étroits.
+
+Je réduis le chemin A\* à quelques points de passage, puis je les relie par une courbe quintique par morceaux. Elle accélère jusqu’à la vitesse maximale, arrondit les virages à moins de 0,75 m et est vérifiée contre la carte avec le rayon du drone. Un serveur de trajectoire séparé envoie ses consignes de position, de vitesse et d’accélération à PX4, en mode offboard.
+
+La carte s’étend pendant le vol, et le plan change avec elle. À chaque mise à jour de la carte (5 Hz), le planificateur vérifie le reste de la trajectoire et la remplace si elle touche un obstacle nouvellement vu. Toutes les 2 s, il prend aussi un plan nettement plus rapide s’il en trouve un, c’est-à-dire avec au moins 1 s et 10 % de gain. Un nouveau plan prend le relais 1 s plus loin sur la trajectoire en cours, en reprenant sa position, sa vitesse, son accélération et son cap, donc sans à-coup. Quand il est bloqué, le drone freine jusqu’au vol stationnaire. Il freine immédiatement si un obstacle devait passer à moins de 0,4 m avant qu’un nouveau plan puisse prendre le relais.
+
+J’ai calculé la vitesse maximale à partir de la distance d’arrêt. À 1 m/s et 1 m/s², le drone a besoin d’environ 2,0 m pour s’arrêter après l’apparition d’un obstacle : 0,75 s de réaction (environ 0,9 m), 0,94 m de freinage et jusqu’à 0,18 m d’erreur de suivi. La portée de 10 m de la caméra laisse une large marge. Les angles masqués, beaucoup moins : dans l’usine, une face apparaît à environ 2,5 m. Au passage, j’ai mesuré que PX4 dépasse la vitesse demandée d’environ 16 % par m/s² d’accélération, et j’ai trouvé pourquoi.
+
+La caméra ne voit jamais à côté ni en dessous du drone, donc le planificateur bloque l’espace inconnu à moins de 1,5 m du départ d’un plan. C’est ce que j’appelle la règle de l’espace connu.
+
+Pour le débogage, chaque plan peut être enregistré et rejoué hors ligne avec `plan_replay`, et `mission_metrics.py` mesure chaque vol.
+
+Dans le monde `factory`, le vol du départ jusque derrière un mur de caisses demande une dizaine de replanifications à mesure que le hall se dévoile. Le drone découvre l’impasse, passe par-dessus les caisses et s’arrête à moins de 15 cm de l’objectif, en environ 40 s.
 
 | Couche | Outil | Développé par moi ? |
 | --- | --- | --- |
 | Simulation | Gazebo Harmonic | Non |
-| Contrôle de vol et estimation d’état | PX4 SITL (EKF2) | Non |
+| Contrôle de vol | PX4 SITL v1.17.0, via XRCE-DDS | Non |
+| Localisation | Capture de mouvement simulée, comme dans une volière de laboratoire | Non |
 | Cartographie 3D | OctoMap à partir de la caméra de profondeur simulée | Non |
-| Planification de chemin 3D | Planificateur sur l’OctoMap | **Oui** |
-| Intégration | Nœuds ROS 2 entre PX4, la carte et le planificateur | Oui |
+| Planification 3D, lissage et replanification | Cœur du planificateur en C++, sans ROS et testé unitairement | **Oui** |
+| Serveur de trajectoire | C++, envoie les consignes à PX4 en offboard | **Oui** |
+| Intégration et outils | Nœuds ROS 2 et outils Python | Oui |
 
-## Journal d’avancement
+La localisation par capture de mouvement simulée est un choix : elle isole le planificateur des erreurs d’estimation d’état. Voler sur une estimation embarquée, par exemple du SLAM visuel-inertiel, est l’étape suivante naturelle.
 
-- **Octobre 2026 :** périmètre et critère de fin définis. Choix de Gazebo Harmonic plutôt qu’Isaac Sim, parce que PX4 le supporte officiellement et qu’il tourne sur mon matériel.
+## Ce que les essais ont révélé
+
+Quatre problèmes ne sont apparus qu’une fois les vols mesurés, et les corriger a changé la conception :
+
+- Le planificateur pouvait se figer en plein vol. Freiner un drone encore en train d’accélérer lançait une recherche sans fin d’une durée qui convienne, et le drone suivait sa dernière trajectoire à l’aveugle jusque dans le mur de caisses. Le freinage tient maintenant compte de l’accélération de départ, et chaque recherche de durée est bornée.
+- Les plans à faible coût tournaient vers les côtés jamais vus des blocs d’étagères, parce que la caméra ne voit pas sur les côtés : 4 vols sur 6 à coût 0 en ont frôlé ou touché un. La règle de l’espace connu vient de là.
+- Le drone avançait au ralenti dans les longues allées. Le hall n’a pas de toit, et OctoMap ne cartographie que le long des rayons qui touchent quelque chose : l’espace droit devant restait inconnu. Les pixels sans retour de la caméra deviennent maintenant des rayons qui libèrent l’espace jusqu’à 10 m.
+- OctoMap trouait les murs vus en incidence rasante. Les voxels occupés sont maintenant persistants, ce qui est sûr parce que les mondes sont statiques.
+
+## Limites et suites
+
+- La localisation est une capture de mouvement simulée : la robustesse aux erreurs d’une estimation embarquée n’est pas encore évaluée.
+- Il n’y a qu’une caméra de profondeur frontale. Les mondes de test n’ont pas d’obstacle juste au-dessus ou en dessous de la trajectoire, et les murs à côté du drone restent invisibles.
+- Le tout tourne uniquement en simulation, dans des mondes statiques : les obstacles ne disparaissent jamais de la carte.
+- La vitesse maximale est de 1 m/s, limitée par les angles masqués.
+
+## Étapes
+
+Réalisé entre le 8 octobre et le 2 novembre 2026, chaque étape étant marquée par un tag dans le dépôt :
+
+1. Infrastructure et contrôle offboard, avec un vol en huit.
+2. De la caméra de profondeur à l’OctoMap.
+3. A\* avec coût de l’inconnu, lissage et vérification des collisions.
+4. Replanification dans le monde `factory`.
+5. Essais sur le coût de l’inconnu et vidéo de démonstration.
