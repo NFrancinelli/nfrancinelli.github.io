@@ -50,14 +50,14 @@ import photo from './images/photo.png';
 ## CV
 
 - `public/cv/Francinelli_CV_EN.pdf` and `public/cv/Francinelli_CV_FR.pdf`
-- The CV link shows up in the header and on About once the file exists. FR falls back to EN.
+- The CV link shows up in the header and in the About section once the file exists. FR falls back to EN.
 - Public versions only: **no phone number**.
 
 ## Where things live
 
 - `src/site.ts`: contact links, CV file names, GoatCounter code (empty = analytics off)
 - `src/i18n.ts`: nav and UI labels, EN + FR
-- `src/components/AboutPage.astro`: About page text
+- `src/components/About.astro`: About section text (shown on the home page)
 - `src/scripts/explorer.ts`: home page animation
 
 ## Deploy

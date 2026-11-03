@@ -34,11 +34,22 @@ const copy = {
     ],
     skillsTitle: 'Skills',
     skills: [
-      ['Programming', 'C++, C, Python'],
-      ['Robotics', 'ROS 2, ROS, behaviour trees, Gazebo, PX4, OpenCV'],
-      ['Tools', 'Linux, Docker, Git, CUnit, MATLAB/Simulink, CAD, TIA Portal'],
-      ['Certification', 'CodinGame C++ (2022)'],
+      ['Programming & tools', 'C, C++, Python, Linux, Git, Docker, CAD'],
+      [
+        'Robotics',
+        'ROS, ROS 2, Gazebo, behavior trees, state machines, trajectory planning, autonomous navigation, admittance control, PID control',
+      ],
+      [
+        'Industrial automation',
+        'Siemens TIA Portal, Siemens Industrial PC, PLC, PROFINET, HMI, TCP/IP, IO-Link',
+      ],
+      [
+        'Perception & AI',
+        'OpenCV, computer vision, machine learning, CNN, Kalman filter, sensor fusion',
+      ],
+      ['Testing & quality', 'Unit testing (CUnit), code coverage, memory analysis, test automation'],
       ['Languages', 'Spanish (native), English (C2), French (C2), Italian (A2)'],
+      ['Certification', 'CodinGame Certification, C++ (2022)'],
     ],
   },
   fr: {
@@ -64,24 +75,35 @@ const copy = {
     ],
     skillsTitle: 'Compétences',
     skills: [
-      ['Programmation', 'C++, C, Python'],
-      ['Robotique', 'ROS 2, ROS, behaviour trees, Gazebo, PX4, OpenCV'],
-      ['Outils', 'Linux, Docker, Git, CUnit, MATLAB/Simulink, CAO, TIA Portal'],
-      ['Certification', 'CodinGame C++ (2022)'],
-      ['Langues', 'espagnol (natif), anglais (C2), français (C2), italien (A2)'],
+      ['Programmation & outils', 'C, C++, Python, Linux, Git, Docker, CAO'],
+      [
+        'Robotique',
+        'ROS, ROS 2, Gazebo, behavior trees, machines à états, planification de trajectoires, navigation autonome, contrôle en admittance, régulation PID',
+      ],
+      [
+        'Automatisme industriel',
+        'TIA Portal, IPC Siemens, automate (API/PLC), PROFINET, IHM, TCP/IP, IO-Link',
+      ],
+      [
+        'Vision & IA',
+        'OpenCV, vision par ordinateur, machine learning, CNN, filtre de Kalman, fusion de capteurs',
+      ],
+      ['Tests & qualité', 'tests unitaires (CUnit), couverture de code, analyse mémoire, automatisation des tests'],
+      ['Langues', 'espagnol (langue maternelle), français (C2), anglais (C2), italien (A2)'],
+      ['Certification', 'CodinGame Certification, C++ (2022)'],
     ],
   },
 }[locale];
 ---
 
-<div class="about">
-  <h1>{t.aboutTitle}</h1>
+<section id="about" class="about" aria-labelledby="about-title">
+  <h2 id="about-title">{t.aboutTitle}</h2>
   {copy.intro.map((p) => <p>{p}</p>)}
   <p>
     {
       cv ? (
         <>
-          {copy.cvWith} <a href={cv}>{copy.cvLink}</a>.
+          {copy.cvWith} <a href={cv} target="_blank" rel="noopener">{copy.cvLink}</a>.
         </>
       ) : (
         copy.cvWithout
@@ -89,7 +111,7 @@ const copy = {
     }
   </p>
 
-  <h2>{copy.educationTitle}</h2>
+  <h3>{copy.educationTitle}</h3>
   <dl class="ruled">
     {
       copy.education.map((e) => (
@@ -104,7 +126,7 @@ const copy = {
     }
   </dl>
 
-  <h2>{copy.skillsTitle}</h2>
+  <h3>{copy.skillsTitle}</h3>
   <dl class="ruled">
     {
       copy.skills.map(([k, v]) => (
@@ -115,23 +137,23 @@ const copy = {
       ))
     }
   </dl>
-</div>
+</section>
 
 <style>
   .about {
     max-width: var(--reading-width);
     font-size: var(--reading-size);
-    padding-top: calc(var(--cell) * 1.5);
-  }
-
-  h1 {
-    margin: 0 0 1.25rem;
-    font-size: clamp(2.4rem, 6vw, 4rem);
-    font-stretch: 65%;
-    font-weight: 800;
+    padding-top: calc(var(--cell) * 3);
+    scroll-margin-top: var(--cell);
   }
 
   h2 {
+    margin: 0 0 calc(var(--cell) * 1.5);
+    font-size: 2.25rem;
+    font-stretch: 70%;
+  }
+
+  h3 {
     margin: calc(var(--cell) * 2) 0 0.75rem;
     font-size: 1.75rem;
     font-stretch: 75%;

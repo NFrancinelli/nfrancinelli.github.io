@@ -1,0 +1,48 @@
+---
+import { ui, type Locale } from '../i18n';
+import { getProjects } from '../projects';
+import ProjectCard from './ProjectCard.astro';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = ui[locale];
+const projects = await getProjects(locale);
+---
+
+<section class="projects" aria-labelledby="projects-title">
+  <h1 id="projects-title">{t.projectsTitle}</h1>
+  <ol class="plates">
+    {
+      projects.map((project, n) => (
+        <li>
+          <ProjectCard locale={locale} project={project} figure={n + 1} />
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .projects {
+    padding-top: calc(var(--cell) * 1.5);
+  }
+
+  h1 {
+    margin: 0 0 calc(var(--cell) * 1.5);
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-stretch: 65%;
+    font-weight: 800;
+  }
+
+  .plates {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    gap: calc(var(--cell) * 2) calc(var(--cell) * 2);
+  }
+</style>

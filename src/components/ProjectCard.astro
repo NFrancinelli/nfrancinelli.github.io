@@ -1,0 +1,139 @@
+---
+// One project as a figure plate: thumbnail, title, summary, year and stack.
+// Used in the projects grid and, with `featured`, for the latest project on the home page.
+import { Image } from 'astro:assets';
+import { localePath, ui, type Locale } from '../i18n';
+import type { Project } from '../projects';
+
+interface Props {
+  locale: Locale;
+  project: Project;
+  /** Figure number shown before the title. */
+  figure?: number;
+  /** Wide layout: image beside the text on larger screens. */
+  featured?: boolean;
+}
+
+const { locale, project, figure, featured = false } = Astro.props;
+const { slug, entry } = project;
+const t = ui[locale];
+const href = localePath(locale, `/projects/${slug}/`);
+---
+
+<article class:list={['plate', { featured }]}>
+  <a class="frame-link" href={href} tabindex="-1" aria-hidden="true">
+    <div class="frame">
+      <Image src={entry.data.thumbnail} alt={entry.data.thumbnailAlt} width={featured ? 960 : 720} />
+      {entry.data.status === 'in-progress' && <span class="stamp">{t.inProgress}</span>}
+    </div>
+  </a>
+  <div class="text">
+    <h3>
+      <a href={href}>
+        {
+          figure !== undefined && (
+            <>
+              <span class="fig">
+                {t.figure} {figure}.
+              </span>{' '}
+            </>
+          )
+        }
+        {entry.data.title}
+      </a>
+    </h3>
+    <p>{entry.data.summary}</p>
+    <p class="meta">
+      {entry.data.date.getUTCFullYear()}, {entry.data.stack.slice(0, 4).join(', ')}
+    </p>
+    {featured && <p class="more"><a href={href}>{t.readProject} →</a></p>}
+  </div>
+</article>
+
+<style>
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .frame {
+    position: relative;
+    padding: 8px;
+    background: var(--paper-raised);
+    border: 1px solid var(--ink);
+  }
+
+  .frame :global(img) {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .stamp {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    padding: 0.15rem 0.6rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-stretch: 75%;
+    font-size: 1.05rem;
+    color: var(--margin-rule);
+    background: var(--paper-raised);
+    border: 2px solid var(--margin-rule);
+    transform: rotate(-4deg);
+  }
+
+  h3 {
+    margin: 0.85rem 0 0.35rem;
+    font-size: 1.4rem;
+  }
+
+  .plate:has(a:hover) h3 a {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.15em;
+  }
+
+  .fig {
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  p {
+    margin: 0;
+    max-width: var(--measure);
+  }
+
+  .meta {
+    margin-top: 0.4rem;
+    font-size: 0.92rem;
+    color: var(--muted);
+  }
+
+  .more {
+    margin-top: 1rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+
+  .more a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  @media (min-width: 800px) {
+    .featured {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: calc(var(--cell) * 2);
+      align-items: center;
+    }
+
+    .featured h3 {
+      margin-top: 0;
+      font-size: 1.75rem;
+    }
+  }
+</style>

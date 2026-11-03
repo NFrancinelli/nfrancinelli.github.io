@@ -18,7 +18,7 @@ const { Content } = await render(entry);
 ---
 
 <article lang={isFallback ? 'en' : undefined}>
-  <p class="back"><a href={`${localePath(locale, '/')}#projects`}>{t.backToProjects}</a></p>
+  <p class="back"><a href={localePath(locale, '/projects/')}>{t.backToProjects}</a></p>
 
   {isFallback && t.fallbackNotice && <p class="notice" lang={locale}>{t.fallbackNotice}</p>}
 
