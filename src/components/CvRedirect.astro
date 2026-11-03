@@ -1,0 +1,31 @@
+---
+// Page behind the short /cv/ links. Browsers may keep this page for up to 10 minutes
+// (GitHub Pages' cache rule), so the script builds the PDF link at visit time with a
+// fresh code: the browser has never seen that URL and always downloads the current PDF.
+// Without JavaScript it falls back to the versioned link known at build time.
+import { site } from '../site';
+import { cvUrl } from '../cv';
+import type { Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const versioned = cvUrl(locale);
+const file = versioned?.split('?')[0];
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <title>{site.name}, CV</title>
+    {versioned && <script is:inline define:vars={{ file }}>location.replace(file + '?v=' + Date.now());</script>}
+    {versioned && <noscript><meta http-equiv="refresh" content={`0;url=${versioned}`} /></noscript>}
+  </head>
+  <body>
+    {versioned && <a href={versioned}>{locale === 'fr' ? 'Ouvrir le CV (PDF)' : 'Open the CV (PDF)'}</a>}
+  </body>
+</html>

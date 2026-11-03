@@ -51,6 +51,8 @@ import photo from './images/photo.png';
 
 - `public/cv/Francinelli_CV_EN.pdf` and `public/cv/Francinelli_CV_FR.pdf`
 - The CV link shows up in the header and in the About section once the file exists. FR falls back to EN.
+- Short links: `/cv/` opens the English CV, `/fr/cv/` the French one.
+- CV links carry a `?v=` code that changes with the PDF, so browsers never show an old cached copy.
 - Public versions only: **no phone number**.
 
 ## Where things live
